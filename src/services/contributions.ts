@@ -130,22 +130,11 @@ export class ContributionsService {
 		const { delayMs = env.fetchDelayMs, concurrency = 5 } = options;
 		const contributionsMap = new Map<string, Contribution[]>();
 
-		console.log(
-			`\n🏆 Fetching contributions for ${userIds.length} users (concurrency: ${concurrency})...\n`,
-		);
-
-		let completed = 0;
-		const total = userIds.length;
-
 		await this.processInBatches(
 			userIds,
 			async (userId) => {
 				const contributions = await this.fetchAll(userId, { delayMs: 50 });
 				contributionsMap.set(userId, contributions);
-				completed++;
-				console.log(
-					`📊 Contributions: ${completed}/${total} (${contributions.length} items)`,
-				);
 				return contributions;
 			},
 			concurrency,

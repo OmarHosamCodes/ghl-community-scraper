@@ -20,7 +20,6 @@ export async function exportToJson<T>(
 	await mkdir(dirname(outputPath), { recursive: true });
 
 	await writeFile(outputPath, JSON.stringify(data, null, 2));
-	console.log(`💾 Exported to ${outputPath}`);
 }
 
 /**
@@ -94,8 +93,6 @@ export async function exportFullData(
 	data: FullDataExport,
 	outputDir: string = "output",
 ): Promise<void> {
-	console.log("\n💾 Exporting data to files...\n");
-
 	// Export full data
 	await exportToJson(data, `${outputDir}/full-data.json`);
 
@@ -185,6 +182,4 @@ export async function exportFullData(
 			`${outputDir}/contributions.json`,
 		);
 	}
-
-	console.log("\n✅ All data exported successfully!");
 }

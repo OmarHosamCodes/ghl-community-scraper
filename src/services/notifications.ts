@@ -34,18 +34,13 @@ export class NotificationsService {
 		};
 
 		const endpoint = this.getNotificationsEndpoint();
-		console.log(
-			`🔔 Fetching notifications: ${endpoint}?${new URLSearchParams(params).toString()}`,
-		);
 
 		try {
 			const response = await this.client.get<Notification[]>(endpoint, {
 				params,
 			});
-			console.log(`✅ Fetched ${response.data.length} notifications`);
 			return response.data;
-		} catch (error) {
-			console.error("❌ Error fetching notifications:", error);
+		} catch {
 			return [];
 		}
 	}

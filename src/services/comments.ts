@@ -52,7 +52,7 @@ export class CommentsService {
 		postId: string,
 		options: FetchOptions = {},
 	): Promise<Comment[]> {
-		const { delayMs = 100, verbose = false } = options;
+		const { delayMs = 100 } = options;
 		const allComments: Comment[] = [];
 		let previousId: string | undefined;
 
@@ -68,8 +68,7 @@ export class CommentsService {
 				if (comments.length === env.fetchLimit) {
 					await Bun.sleep(delayMs);
 				}
-			} catch (error) {
-				if (verbose) console.error(`    ❌ Error fetching comments:`, error);
+			} catch {
 				break;
 			}
 		}
@@ -143,17 +142,11 @@ export class CommentsService {
 		postId: string,
 		options: FetchOptions = {},
 	): Promise<Comment[]> {
-		const {
-			delayMs = 100,
-			maxDepth = 10,
-			concurrency = 5,
-			verbose = false,
-		} = options;
+		const { delayMs = 100, maxDepth = 10, concurrency = 5 } = options;
 
 		// First, get all top-level comments
 		const topLevelComments = await this.fetchAllForPost(postId, {
 			delayMs,
-			verbose,
 		});
 
 		if (topLevelComments.length === 0) return [];
@@ -162,12 +155,6 @@ export class CommentsService {
 		const commentsWithReplies = topLevelComments.filter(
 			(c) => c.repliesCount > 0,
 		);
-
-		if (verbose && commentsWithReplies.length > 0) {
-			console.log(
-				`    🔄 Fetching replies for ${commentsWithReplies.length} comments...`,
-			);
-		}
 
 		// Create a map for quick lookup
 		const commentMap = new Map<string, Comment>(
