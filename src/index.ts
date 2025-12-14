@@ -11,8 +11,8 @@ async function main() {
 			fetchUsers: false,
 			fetchProfiles: false,
 			fetchContributions: false,
-			fetchGamification: false,
-			fetchCommunityInfo: true,
+			fetchGamification: true,
+			fetchCommunityInfo: false,
 			fetchChannels: false,
 			fetchNotifications: false,
 			maxCommentDepth: 10, // Maximum depth for recursive comment fetching

@@ -70,5 +70,4 @@ export interface GamificationExport {
 export interface LeaderboardFetchOptions {
 	limit?: number;
 	offset?: number;
-	period?: "all" | "weekly" | "monthly";
 }

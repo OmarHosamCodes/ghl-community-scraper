@@ -7,6 +7,15 @@ import type {
 } from "../types";
 
 /**
+ * API response interface for leaderboard
+ */
+interface LeaderboardResponse {
+	leaderboard?: LeaderboardEntry[];
+	ranks?: LeaderboardEntry[];
+	[key: string]: unknown;
+}
+
+/**
  * Gamification service for fetching leaderboards, badges, levels, and points
  */
 export class GamificationService {
@@ -18,10 +27,10 @@ export class GamificationService {
 	) {}
 
 	/**
-	 * Get the leaderboard endpoint
+	 * Get the leaderboard endpoint (clientclub API)
 	 */
 	private getLeaderboardEndpoint(): string {
-		return `/communities/${this.communityId}/groups/${this.groupId}/leaderboard`;
+		return `/clientclub/leaderboards/${this.groupId}`;
 	}
 
 	/**
@@ -30,12 +39,11 @@ export class GamificationService {
 	async fetchLeaderboard(
 		options: LeaderboardFetchOptions = {},
 	): Promise<LeaderboardEntry[]> {
-		const { limit = 100, offset = 0, period = "all" } = options;
+		const { limit = 100, offset = 0 } = options;
 
 		const params: Record<string, string> = {
-			limit: String(limit),
-			offset: String(offset),
-			period,
+			rankLimit: String(limit),
+			rankSkip: String(offset),
 		};
 
 		const endpoint = this.getLeaderboardEndpoint();
@@ -44,10 +52,15 @@ export class GamificationService {
 		);
 
 		try {
-			const response = await this.client.get<LeaderboardEntry[]>(endpoint, {
+			const response = await this.client.get<LeaderboardResponse>(endpoint, {
 				params,
 			});
-			return response.data;
+			// API may return data under 'leaderboard', 'ranks', or directly as array
+			const data = response.data;
+			if (Array.isArray(data)) {
+				return data;
+			}
+			return data.leaderboard || data.ranks || [];
 		} catch (error) {
 			console.error("❌ Error fetching leaderboard:", error);
 			return [];
@@ -58,9 +71,9 @@ export class GamificationService {
 	 * Fetch all leaderboard entries with pagination
 	 */
 	async fetchFullLeaderboard(
-		options: { delayMs?: number; period?: "all" | "weekly" | "monthly" } = {},
+		options: { delayMs?: number } = {},
 	): Promise<LeaderboardEntry[]> {
-		const { delayMs = env.fetchDelayMs, period = "all" } = options;
+		const { delayMs = env.fetchDelayMs } = options;
 		const allEntries: LeaderboardEntry[] = [];
 		let offset = 0;
 		const limit = 100;
@@ -70,7 +83,7 @@ export class GamificationService {
 
 		while (true) {
 			try {
-				const entries = await this.fetchLeaderboard({ limit, offset, period });
+				const entries = await this.fetchLeaderboard({ limit, offset });
 
 				if (entries.length === 0) {
 					console.log("\n✅ No more leaderboard entries. Done!");

@@ -46,13 +46,10 @@ export function getMembersEndpoint(
 }
 
 /**
- * Get the leaderboard endpoint URL for a community/group
+ * Get the leaderboard endpoint URL for a group (clientclub API)
  */
-export function getLeaderboardEndpoint(
-	communityId: string = env.communityId,
-	groupId: string = env.groupId,
-): string {
-	return `/communities/${communityId}/groups/${groupId}/leaderboard`;
+export function getLeaderboardEndpoint(groupId: string = env.groupId): string {
+	return `/clientclub/leaderboards/${groupId}`;
 }
 
 /**

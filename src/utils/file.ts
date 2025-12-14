@@ -104,8 +104,6 @@ export async function exportFullData(
 		const communityExport: CommunityExport = {
 			fetchedAt: data.fetchedAt,
 			community: data.community,
-			groups: data.groups,
-			channels: data.channels,
 		};
 		await exportToJson(communityExport, `${outputDir}/community.json`);
 	}
@@ -136,11 +134,7 @@ export async function exportFullData(
 		);
 	}
 
-	if (
-		data.gamification.leaderboard.length > 0 ||
-		data.gamification.badges.length > 0 ||
-		data.gamification.levels.length > 0
-	) {
+	if (data.gamification.leaderboard.length > 0) {
 		const gamificationExport: GamificationExport = {
 			fetchedAt: data.fetchedAt,
 			communityId: data.communityId,
