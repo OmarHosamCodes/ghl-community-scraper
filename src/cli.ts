@@ -163,8 +163,8 @@ async function runInteractiveScraper(options: CliOptions): Promise<void> {
 
 				let processed = 0;
 				const {
-					concurrency = 50,
-					maxCommentDepth = 100,
+					concurrency = 500,
+					maxCommentDepth = 10,
 					delayMs = 100,
 				} = options;
 
@@ -312,7 +312,7 @@ async function runInteractiveScraper(options: CliOptions): Promise<void> {
 						// Fetch contributions
 						if (options.fetchContributions) {
 							const contributions = await services.contributions.fetchAll(
-								user._id,
+								user.contactId,
 								{ delayMs: 50 },
 							);
 							userWithExtras.contributions = contributions;

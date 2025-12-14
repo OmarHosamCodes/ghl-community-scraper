@@ -15,7 +15,7 @@ async function main() {
 			fetchCommunityInfo: false,
 			fetchChannels: true,
 			fetchNotifications: false,
-			maxCommentDepth: 100, // Maximum depth for recursive comment fetching
+			maxCommentDepth: 10, // Maximum depth for recursive comment fetching
 			concurrency: 500, // Number of concurrent fetches for parallel operations
 		};
 
