@@ -178,7 +178,7 @@ export class ScraperService {
 		// Fetch users
 		if (fetchUsers) {
 			console.log("📍 STEP 4: Fetching users/members...\n");
-			const users = await this.usersService.fetchAll({ delayMs });
+			const users = await this.usersService.fetchAll();
 			result.users = users;
 			result.metadata.totalUsers = users.length;
 			console.log(`\n${"=".repeat(60)}\n`);

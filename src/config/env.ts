@@ -2,36 +2,40 @@
  * Environment configuration
  * Loads and validates environment variables
  */
+import { z } from "zod";
 
-function getEnvVar(key: string, defaultValue?: string): string {
-	const value = process.env[key] ?? defaultValue;
-	if (!value) {
-		throw new Error(`Missing required environment variable: ${key}`);
-	}
-	return value;
-}
+/**
+ * Environment configuration
+ * Loads and validates environment variables using Zod
+ */
 
-function getEnvNumber(key: string, defaultValue: number): number {
-	const value = process.env[key];
-	if (!value) return defaultValue;
-	const parsed = parseInt(value, 10);
-	if (Number.isNaN(parsed)) {
-		throw new Error(`Environment variable ${key} must be a number`);
-	}
-	return parsed;
-}
+const rawEnvSchema = z.object({
+	COMMUNITY_ID: z.string().min(1, "COMMUNITY_ID is required"),
+	GROUP_ID: z.string().min(1, "GROUP_ID is required"),
+	TOKEN_ID: z.string().min(1, "TOKEN_ID is required"),
+	FETCH_LIMIT: z.preprocess(
+		(val) => (val === undefined ? undefined : Number.parseInt(String(val), 10)),
+		z.number().int().positive().default(20),
+	),
+	FETCH_DELAY_MS: z.preprocess(
+		(val) => (val === undefined ? undefined : Number.parseInt(String(val), 10)),
+		z.number().int().nonnegative().default(500),
+	),
+});
+
+const parsed = rawEnvSchema.parse(process.env);
 
 export const env = {
 	// Community settings
-	communityId: getEnvVar("COMMUNITY_ID"),
-	groupId: getEnvVar("GROUP_ID"),
+	communityId: parsed.COMMUNITY_ID,
+	groupId: parsed.GROUP_ID,
 
 	// Authentication
-	tokenId: getEnvVar("TOKEN_ID"),
+	tokenId: parsed.TOKEN_ID,
 
 	// API settings
-	fetchLimit: getEnvNumber("FETCH_LIMIT", 20),
-	fetchDelayMs: getEnvNumber("FETCH_DELAY_MS", 500),
+	fetchLimit: parsed.FETCH_LIMIT,
+	fetchDelayMs: parsed.FETCH_DELAY_MS,
 } as const;
 
 export type Env = typeof env;
