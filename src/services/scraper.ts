@@ -115,10 +115,7 @@ export class ScraperService {
 			console.log("📍 STEP 1: Fetching community information...\n");
 			const communityData = await this.communityService.fetchAll({ delayMs });
 			result.community = communityData.community;
-			result.groups = communityData.groups;
-			result.channels = communityData.channels;
-			result.metadata.totalGroups = communityData.groups.length;
-			result.metadata.totalChannels = communityData.channels.length;
+
 			console.log(`\n${"=".repeat(60)}\n`);
 		}
 

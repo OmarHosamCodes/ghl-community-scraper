@@ -46,11 +46,22 @@ export interface Community {
 	[key: string]: unknown;
 }
 
+export interface GroupDetailResponse {
+	groupDetail: Group;
+	membershipQuestions: unknown | null;
+	user: unknown[];
+	owner: {
+		_id: string;
+		contactId: string;
+		fullName: string;
+		slug: string;
+		avatar?: string;
+	};
+}
+
 export interface CommunityExport {
 	fetchedAt: string;
 	community: Community;
-	groups: Group[];
-	channels: Channel[];
 }
 
 export interface GroupFetchOptions {
