@@ -144,7 +144,7 @@ export async function getAdvancedOptions(): Promise<{
 	if (!wantAdvanced) {
 		return {
 			concurrency: 50,
-			maxCommentDepth: 100,
+			maxCommentDepth: 10,
 			delayMs: 100,
 			outputDir: "output",
 		};
@@ -166,13 +166,13 @@ export async function getAdvancedOptions(): Promise<{
 				}),
 			maxCommentDepth: () =>
 				p.text({
-					message: "Maximum comment depth (1-200)",
-					placeholder: "100",
-					defaultValue: "100",
+					message: "Maximum comment depth (1-50)",
+					placeholder: "10",
+					defaultValue: "10",
 					validate: (value) => {
 						const num = Number.parseInt(value, 10);
-						if (Number.isNaN(num) || num < 1 || num > 200) {
-							return "Please enter a number between 1 and 200";
+						if (Number.isNaN(num) || num < 1 || num > 50) {
+							return "Please enter a number between 1 and 50";
 						}
 					},
 				}),
