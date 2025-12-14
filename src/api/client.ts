@@ -21,7 +21,7 @@ export function getPostsEndpoint(
 	communityId: string = env.communityId,
 	groupId: string = env.groupId,
 ): string {
-	return `/communities/${communityId}/groups/${groupId}/posts`;
+	return `/communities/${communityId}/groups/${groupId}/public/posts`;
 }
 
 /**
@@ -32,7 +32,7 @@ export function getCommentsEndpoint(
 	groupId: string = env.groupId,
 	postId: string,
 ): string {
-	return `/communities/${communityId}/groups/${groupId}/posts/${postId}/comments`;
+	return `/communities/${communityId}/groups/${groupId}/public/posts/${postId}/comments`;
 }
 
 /**
