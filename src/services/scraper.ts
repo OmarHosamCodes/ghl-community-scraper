@@ -57,7 +57,7 @@ export class ScraperService {
 			maxCommentDepth,
 			delayMs,
 		});
-		console.log("\n" + "=".repeat(60) + "\n");
+		console.log(`\n${"=".repeat(60)}\n`);
 
 		// Initialize result structure
 		const result: FullDataExport = {
@@ -92,7 +92,7 @@ export class ScraperService {
 			result.channels = communityData.channels;
 			result.metadata.totalGroups = communityData.groups.length;
 			result.metadata.totalChannels = communityData.channels.length;
-			console.log("\n" + "=".repeat(60) + "\n");
+			console.log(`\n${"=".repeat(60)}\n`);
 		}
 
 		// Fetch posts
@@ -102,7 +102,7 @@ export class ScraperService {
 			const posts = await this.postsService.fetchAll({ delayMs });
 			postsWithComments = posts.map((post) => ({ ...post }));
 			result.metadata.totalPosts = posts.length;
-			console.log("\n" + "=".repeat(60) + "\n");
+			console.log(`\n${"=".repeat(60)}\n`);
 
 			// Fetch comments for each post - parallelized
 			if (fetchComments && posts.length > 0) {
@@ -169,7 +169,7 @@ export class ScraperService {
 				);
 				result.metadata.totalComments = totalComments;
 				console.log(`\n📊 Total comments fetched: ${totalComments}`);
-				console.log("\n" + "=".repeat(60) + "\n");
+				console.log(`\n${"=".repeat(60)}\n`);
 			}
 		}
 
@@ -181,7 +181,7 @@ export class ScraperService {
 			const users = await this.usersService.fetchAll({ delayMs });
 			result.users = users;
 			result.metadata.totalUsers = users.length;
-			console.log("\n" + "=".repeat(60) + "\n");
+			console.log(`\n${"=".repeat(60)}\n`);
 		}
 
 		// Fetch gamification data
@@ -196,7 +196,7 @@ export class ScraperService {
 				levels: gamificationData.levels,
 				pointActions: gamificationData.pointActions,
 			};
-			console.log("\n" + "=".repeat(60) + "\n");
+			console.log(`\n${"=".repeat(60)}\n`);
 		}
 
 		// Print summary
