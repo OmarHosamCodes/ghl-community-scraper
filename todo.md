@@ -2,6 +2,6 @@ Scrapers:
 
 POSTS [x]
 COMMENTS [x]
-USERS [ ]
+USERS [x]
 GAMIFICATION [ ]
 COMMUNITY INFO [ ]

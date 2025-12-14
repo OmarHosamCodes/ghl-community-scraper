@@ -6,9 +6,9 @@ async function main() {
 	try {
 		// Configure what to fetch
 		const options: ScraperOptions = {
-			fetchPosts: true,
-			fetchComments: true,
-			fetchUsers: false,
+			fetchPosts: false,
+			fetchComments: false,
+			fetchUsers: true,
 			fetchGamification: false,
 			fetchCommunityInfo: false,
 			maxCommentDepth: 10, // Maximum depth for recursive comment fetching
