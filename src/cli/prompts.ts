@@ -154,13 +154,13 @@ export async function getAdvancedOptions(): Promise<{
 		{
 			concurrency: () =>
 				p.text({
-					message: "Concurrent requests (1-100)",
+					message: "Concurrent requests (1-500)",
 					placeholder: "50",
 					defaultValue: "50",
 					validate: (value) => {
 						const num = Number.parseInt(value, 10);
-						if (Number.isNaN(num) || num < 1 || num > 100) {
-							return "Please enter a number between 1 and 100";
+						if (Number.isNaN(num) || num < 1 || num > 500) {
+							return "Please enter a number between 1 and 500";
 						}
 					},
 				}),
