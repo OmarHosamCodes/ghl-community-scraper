@@ -6,17 +6,17 @@ async function main() {
 	try {
 		// Configure what to fetch
 		const options: ScraperOptions = {
-			fetchPosts: false,
-			fetchComments: false,
-			fetchUsers: false,
-			fetchProfiles: false,
-			fetchContributions: false,
+			fetchPosts: true,
+			fetchComments: true,
+			fetchUsers: true,
+			fetchProfiles: true,
+			fetchContributions: true,
 			fetchGamification: true,
-			fetchCommunityInfo: false,
-			fetchChannels: false,
-			fetchNotifications: false,
-			maxCommentDepth: 10, // Maximum depth for recursive comment fetching
-			concurrency: 10, // Number of concurrent fetches for parallel operations
+			fetchCommunityInfo: true,
+			fetchChannels: true,
+			fetchNotifications: true,
+			maxCommentDepth: 100, // Maximum depth for recursive comment fetching
+			concurrency: 50, // Number of concurrent fetches for parallel operations
 		};
 
 		// Create scraper and fetch all data

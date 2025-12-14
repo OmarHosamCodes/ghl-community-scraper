@@ -13,6 +13,8 @@ export interface LeaderboardEntry {
 	level: number;
 	rank: number;
 	badges?: string[];
+	timeFrame?: string;
+	updatedAt?: string;
 	[key: string]: unknown;
 }
 
