@@ -2,6 +2,11 @@ import { createApiClient } from "../api";
 import { env } from "../config/env";
 import type { User, UserFetchOptions, UserProfile } from "../types";
 
+interface FetchOptions {
+	delayMs?: number;
+	concurrency?: number;
+}
+
 /**
  * Users service for fetching community members
  */
@@ -23,8 +28,33 @@ export class UsersService {
 	/**
 	 * Get the user profile endpoint
 	 */
-	private getProfileEndpoint(locationId: string): string {
-		return `/communities/${this.communityId}/users/${locationId}`;
+	private getProfileEndpoint(contactId: string): string {
+		return `/communities/${this.communityId}/groups/${this.groupId}/users/${contactId}`;
+	}
+
+	/**
+	 * Process items in batches with controlled concurrency
+	 */
+	private async processInBatches<T, R>(
+		items: T[],
+		processor: (item: T) => Promise<R>,
+		concurrency: number,
+		delayBetweenBatches: number,
+	): Promise<R[]> {
+		const results: R[] = [];
+
+		for (let i = 0; i < items.length; i += concurrency) {
+			const batch = items.slice(i, i + concurrency);
+			const batchResults = await Promise.all(batch.map(processor));
+			results.push(...batchResults);
+
+			// Small delay between batches to avoid rate limiting
+			if (i + concurrency < items.length) {
+				await Bun.sleep(delayBetweenBatches);
+			}
+		}
+
+		return results;
 	}
 
 	/**
@@ -64,49 +94,72 @@ export class UsersService {
 	}
 
 	/**
-	 * Fetch a single user's profile by slug
+	 * Fetch a single user's profile by contactId
 	 */
-	async fetchProfile(locationId: string): Promise<UserProfile | null> {
+	async fetchProfile(contactId: string): Promise<UserProfile | null> {
 		try {
-			const endpoint = this.getProfileEndpoint(locationId);
-			console.log(`👤 Fetching profile: ${endpoint}`);
-
+			const endpoint = this.getProfileEndpoint(contactId);
 			const response = await this.client.get<UserProfile>(endpoint);
 			return response.data;
-		} catch (error) {
-			console.error(`❌ Error fetching profile for ${locationId}:`, error);
+		} catch (error: unknown) {
+			// Handle axios errors with proper typing
+			if (error && typeof error === "object" && "response" in error) {
+				const axiosError = error as {
+					response?: { status: number; data?: { message?: string } };
+				};
+				if (axiosError.response?.status === 404) {
+					// User profile not found - this is expected for some users
+					return null;
+				}
+			}
 			return null;
 		}
 	}
 
 	/**
-	 * Fetch profiles for multiple users
+	 * Fetch profiles for multiple users with parallel processing
 	 */
 	async fetchProfiles(
-		locationIds: string[],
-		options: { delayMs?: number } = {},
+		contactIds: string[],
+		options: FetchOptions = {},
 	): Promise<UserProfile[]> {
-		const { delayMs = env.fetchDelayMs } = options;
+		const { delayMs = env.fetchDelayMs, concurrency = 5 } = options;
 		const profiles: UserProfile[] = [];
 
-		for (const locationId of locationIds) {
-			const profile = await this.fetchProfile(locationId);
-			if (profile) {
-				profiles.push(profile);
-			}
-			await Bun.sleep(delayMs);
-		}
+		console.log(
+			`\n👤 Fetching ${contactIds.length} profiles (concurrency: ${concurrency})...\n`,
+		);
+
+		let completed = 0;
+		const total = contactIds.length;
+
+		await this.processInBatches(
+			contactIds,
+			async (contactId) => {
+				const profile = await this.fetchProfile(contactId);
+				if (profile) {
+					profiles.push(profile);
+				}
+				completed++;
+				console.log(
+					`📊 Profiles: ${completed}/${total} (${profile ? "found" : "not found"})`,
+				);
+				return profile;
+			},
+			concurrency,
+			delayMs,
+		);
 
 		return profiles;
 	}
 
 	/**
-	 * Fetch all members and enrich with full profile data
+	 * Fetch all members and enrich with full profile data using parallel processing
 	 */
 	async fetchAllWithProfiles(
-		options: { delayMs?: number } = {},
+		options: FetchOptions = {},
 	): Promise<UserProfile[]> {
-		const { delayMs = env.fetchDelayMs } = options;
+		const { delayMs = env.fetchDelayMs, concurrency = 5 } = options;
 
 		console.log("🚀 Starting to fetch all members with full profiles...\n");
 
@@ -119,31 +172,31 @@ export class UsersService {
 		}
 
 		console.log(
-			`\n📋 Found ${members.length} members. Fetching full profiles...\n`,
+			`\n📋 Found ${members.length} members. Fetching full profiles (concurrency: ${concurrency})...\n`,
 		);
 
-		// Step 2: Fetch full profile for each member using their locationId
+		// Step 2: Fetch full profile for each member using parallel processing
 		const profiles: UserProfile[] = [];
 		let completed = 0;
+		const total = members.length;
 
-		for (const member of members) {
-			const locationId = member._id;
-			const profile = await this.fetchProfile(locationId);
-
-			if (profile) {
-				profiles.push(profile);
-			} else {
-				// Fallback to basic member data if profile fetch fails
-				profiles.push(member as UserProfile);
-			}
-
-			completed++;
-			console.log(
-				`📊 Progress: ${completed}/${members.length} profiles fetched`,
-			);
-
-			await Bun.sleep(delayMs);
-		}
+		await this.processInBatches(
+			members,
+			async (member) => {
+				const profile = await this.fetchProfile(member.contactId);
+				if (profile) {
+					profiles.push(profile);
+				} else {
+					// Fallback to basic member data if profile fetch fails
+					profiles.push(member as UserProfile);
+				}
+				completed++;
+				console.log(`📊 Profiles: ${completed}/${total}`);
+				return profile;
+			},
+			concurrency,
+			delayMs,
+		);
 
 		console.log(`\n✅ Completed! Fetched ${profiles.length} full profiles.`);
 		return profiles;

@@ -60,7 +60,7 @@ export class ScraperService {
 			fetchNotifications = true,
 			maxCommentDepth = 10,
 			delayMs = env.fetchDelayMs,
-			commentConcurrency = 3,
+			concurrency = 5,
 			verboseComments = false,
 		} = options;
 
@@ -77,6 +77,7 @@ export class ScraperService {
 			fetchNotifications,
 			maxCommentDepth,
 			delayMs,
+			concurrency,
 		});
 		console.log(`\n${"=".repeat(60)}\n`);
 
@@ -155,11 +156,8 @@ export class ScraperService {
 				let processed = 0;
 				const totalToProcess = postsWithCommentsToFetch.length;
 
-				for (let i = 0; i < totalToProcess; i += commentConcurrency) {
-					const batch = postsWithCommentsToFetch.slice(
-						i,
-						i + commentConcurrency,
-					);
+				for (let i = 0; i < totalToProcess; i += concurrency) {
+					const batch = postsWithCommentsToFetch.slice(i, i + concurrency);
 
 					await Promise.all(
 						batch.map(async (post) => {
@@ -183,7 +181,7 @@ export class ScraperService {
 					);
 
 					// Small delay between batches
-					if (i + commentConcurrency < totalToProcess) {
+					if (i + concurrency < totalToProcess) {
 						await Bun.sleep(delayMs);
 					}
 				}
@@ -238,37 +236,54 @@ export class ScraperService {
 			result.metadata.totalUsers = users.length;
 			console.log(`\n${"=".repeat(60)}\n`);
 
-			// Fetch profiles for users
-			if (fetchProfiles && users.length > 0) {
-				console.log("📍 STEP 4.1: Fetching user profiles...\n");
-				let profilesCompleted = 0;
+			// Fetch profiles and contributions for users with parallel processing
+			if ((fetchProfiles || fetchContributions) && users.length > 0) {
+				console.log(
+					`📍 STEP 4.1: Fetching user profiles${fetchContributions ? " and contributions" : ""} (concurrency: ${concurrency})...\n`,
+				);
 
-				for (const user of users) {
-					const userWithExtras: UserWithExtras = { ...user };
-					const profile = await this.usersService.fetchProfile(user._id);
+				let completed = 0;
+				const total = users.length;
 
-					if (profile) {
-						userWithExtras.profile = profile;
-						allProfiles.push(profile);
-					}
+				// Process users in parallel batches
+				for (let i = 0; i < total; i += concurrency) {
+					const batch = users.slice(i, i + concurrency);
 
-					profilesCompleted++;
-					console.log(
-						`📊 Progress: ${profilesCompleted}/${users.length} profiles fetched`,
+					await Promise.all(
+						batch.map(async (user) => {
+							const userWithExtras: UserWithExtras = { ...user };
+
+							// Fetch profile
+							if (fetchProfiles) {
+								const profile = await this.usersService.fetchProfile(
+									user.contactId,
+								);
+								if (profile) {
+									userWithExtras.profile = profile;
+									allProfiles.push(profile);
+								}
+							}
+
+							// Fetch contributions
+							if (fetchContributions) {
+								const contributions = await this.contributionsService.fetchAll(
+									user._id,
+									{ delayMs: 50 },
+								);
+								userWithExtras.contributions = contributions;
+								allContributions.push(...contributions);
+							}
+
+							usersWithExtras.push(userWithExtras);
+							completed++;
+							console.log(`📊 Progress: ${completed}/${total} users processed`);
+						}),
 					);
 
-					// Fetch contributions for this user
-					if (fetchContributions) {
-						const contributions = await this.contributionsService.fetchAll(
-							user._id,
-							{ delayMs },
-						);
-						userWithExtras.contributions = contributions;
-						allContributions.push(...contributions);
+					// Small delay between batches
+					if (i + concurrency < total) {
+						await Bun.sleep(delayMs);
 					}
-
-					usersWithExtras.push(userWithExtras);
-					await Bun.sleep(delayMs);
 				}
 
 				result.metadata.totalProfiles = allProfiles.length;

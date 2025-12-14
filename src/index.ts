@@ -16,7 +16,7 @@ async function main() {
 			fetchChannels: false,
 			fetchNotifications: false,
 			maxCommentDepth: 10, // Maximum depth for recursive comment fetching
-			commentConcurrency: 10, // Number of concurrent comment fetches
+			concurrency: 10, // Number of concurrent fetches for parallel operations
 		};
 
 		// Create scraper and fetch all data

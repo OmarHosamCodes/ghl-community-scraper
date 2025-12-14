@@ -2,6 +2,19 @@ import { createApiClient } from "../api";
 import { env } from "../config/env";
 import type { Contribution, ContributionFetchOptions } from "../types";
 
+interface FetchOptions {
+	delayMs?: number;
+	concurrency?: number;
+}
+
+/**
+ * API response wrapper for contributions
+ */
+interface ContributionsResponse {
+	contributions: Contribution[];
+	total: number;
+}
+
 /**
  * Contributions service for fetching user contributions
  */
@@ -21,6 +34,31 @@ export class ContributionsService {
 	}
 
 	/**
+	 * Process items in batches with controlled concurrency
+	 */
+	private async processInBatches<T, R>(
+		items: T[],
+		processor: (item: T) => Promise<R>,
+		concurrency: number,
+		delayBetweenBatches: number,
+	): Promise<R[]> {
+		const results: R[] = [];
+
+		for (let i = 0; i < items.length; i += concurrency) {
+			const batch = items.slice(i, i + concurrency);
+			const batchResults = await Promise.all(batch.map(processor));
+			results.push(...batchResults);
+
+			// Small delay between batches to avoid rate limiting
+			if (i + concurrency < items.length) {
+				await Bun.sleep(delayBetweenBatches);
+			}
+		}
+
+		return results;
+	}
+
+	/**
 	 * Fetch a single page of contributions for a user
 	 */
 	async fetchPage(
@@ -33,20 +71,14 @@ export class ContributionsService {
 		if (lastPaginatedId) params.lastPaginatedId = lastPaginatedId;
 
 		const endpoint = this.getContributionsEndpoint(userId);
-		console.log(
-			`🏆 Fetching contributions: ${endpoint}?${new URLSearchParams(params).toString()}`,
-		);
 
 		try {
-			const response = await this.client.get<Contribution[]>(endpoint, {
+			const response = await this.client.get<ContributionsResponse>(endpoint, {
 				params,
 			});
-			return response.data;
-		} catch (error) {
-			console.error(
-				`❌ Error fetching contributions for user ${userId}:`,
-				error,
-			);
+			// API returns { contributions: [...], total: number }
+			return response.data.contributions ?? [];
+		} catch {
 			return [];
 		}
 	}
@@ -58,39 +90,29 @@ export class ContributionsService {
 		userId: string,
 		options: { delayMs?: number } = {},
 	): Promise<Contribution[]> {
-		const { delayMs = env.fetchDelayMs } = options;
+		const { delayMs = 100 } = options;
 		const allContributions: Contribution[] = [];
 		let lastPaginatedId: string | undefined;
-		let pageNumber = 1;
-
-		console.log(
-			`🏆 Starting to fetch all contributions for user ${userId}...\n`,
-		);
 
 		while (true) {
 			try {
 				const contributions = await this.fetchPage(userId, { lastPaginatedId });
 
-				if (contributions.length === 0) {
-					console.log("\n✅ No more contributions to fetch. Done!");
+				if (!contributions || contributions.length === 0) {
 					break;
 				}
 
 				allContributions.push(...contributions);
-				console.log(
-					`📄 Page ${pageNumber}: Fetched ${contributions.length} contributions (Total: ${allContributions.length})`,
-				);
 
 				const lastContribution = contributions[contributions.length - 1];
 				lastPaginatedId = lastContribution?._id;
-				pageNumber++;
+
+				if (contributions.length < env.fetchLimit) {
+					break;
+				}
 
 				await Bun.sleep(delayMs);
-			} catch (error) {
-				console.error(
-					`\n❌ Error fetching contributions page ${pageNumber}:`,
-					error,
-				);
+			} catch {
 				break;
 			}
 		}
@@ -99,27 +121,36 @@ export class ContributionsService {
 	}
 
 	/**
-	 * Fetch contributions for multiple users
+	 * Fetch contributions for multiple users with parallel processing
 	 */
 	async fetchForUsers(
 		userIds: string[],
-		options: { delayMs?: number } = {},
+		options: FetchOptions = {},
 	): Promise<Map<string, Contribution[]>> {
-		const { delayMs = env.fetchDelayMs } = options;
+		const { delayMs = env.fetchDelayMs, concurrency = 5 } = options;
 		const contributionsMap = new Map<string, Contribution[]>();
 
-		console.log(`\n🏆 Fetching contributions for ${userIds.length} users...\n`);
+		console.log(
+			`\n🏆 Fetching contributions for ${userIds.length} users (concurrency: ${concurrency})...\n`,
+		);
 
 		let completed = 0;
-		for (const userId of userIds) {
-			const contributions = await this.fetchAll(userId, { delayMs });
-			contributionsMap.set(userId, contributions);
-			completed++;
-			console.log(
-				`📊 Progress: ${completed}/${userIds.length} users' contributions fetched`,
-			);
-			await Bun.sleep(delayMs);
-		}
+		const total = userIds.length;
+
+		await this.processInBatches(
+			userIds,
+			async (userId) => {
+				const contributions = await this.fetchAll(userId, { delayMs: 50 });
+				contributionsMap.set(userId, contributions);
+				completed++;
+				console.log(
+					`📊 Contributions: ${completed}/${total} (${contributions.length} items)`,
+				);
+				return contributions;
+			},
+			concurrency,
+			delayMs,
+		);
 
 		return contributionsMap;
 	}
