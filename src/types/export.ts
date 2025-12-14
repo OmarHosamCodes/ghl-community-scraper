@@ -5,12 +5,7 @@
 import type { Comment } from "./comment";
 import type { Channel, Community, Group } from "./community";
 import type { Contribution } from "./contribution";
-import type {
-	Badge,
-	LeaderboardEntry,
-	Level,
-	PointAction,
-} from "./gamification";
+import type { LeaderboardEntry } from "./gamification";
 import type { Post } from "./post";
 import type { User, UserProfile } from "./user";
 
@@ -46,9 +41,6 @@ export interface FullDataExport {
 	contributions: Contribution[];
 	gamification: {
 		leaderboard: LeaderboardEntry[];
-		badges: Badge[];
-		levels: Level[];
-		pointActions: PointAction[];
 	};
 }
 

@@ -65,10 +65,6 @@ export interface GamificationExport {
 	communityId: string;
 	groupId: string;
 	leaderboard: LeaderboardEntry[];
-	badges: Badge[];
-	levels: Level[];
-	pointActions: PointAction[];
-	config?: GamificationConfig;
 }
 
 export interface LeaderboardFetchOptions {

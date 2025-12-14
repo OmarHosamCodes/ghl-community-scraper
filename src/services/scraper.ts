@@ -104,9 +104,6 @@ export class ScraperService {
 			contributions: [],
 			gamification: {
 				leaderboard: [],
-				badges: [],
-				levels: [],
-				pointActions: [],
 			},
 		};
 
@@ -306,9 +303,6 @@ export class ScraperService {
 			});
 			result.gamification = {
 				leaderboard: gamificationData.leaderboard,
-				badges: gamificationData.badges,
-				levels: gamificationData.levels,
-				pointActions: gamificationData.pointActions,
 			};
 			console.log(`\n${"=".repeat(60)}\n`);
 		}
@@ -327,8 +321,6 @@ export class ScraperService {
 		console.log(
 			`  Leaderboard entries: ${result.gamification.leaderboard.length}`,
 		);
-		console.log(`  Badges: ${result.gamification.badges.length}`);
-		console.log(`  Levels: ${result.gamification.levels.length}`);
 		console.log("=".repeat(40));
 
 		return result;

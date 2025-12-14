@@ -1,13 +1,9 @@
 import { createApiClient } from "../api";
 import { env } from "../config/env";
 import type {
-	Badge,
-	GamificationConfig,
 	GamificationExport,
 	LeaderboardEntry,
 	LeaderboardFetchOptions,
-	Level,
-	PointAction,
 } from "../types";
 
 /**
@@ -26,34 +22,6 @@ export class GamificationService {
 	 */
 	private getLeaderboardEndpoint(): string {
 		return `/communities/${this.communityId}/groups/${this.groupId}/leaderboard`;
-	}
-
-	/**
-	 * Get the badges endpoint
-	 */
-	private getBadgesEndpoint(): string {
-		return `/communities/${this.communityId}/badges`;
-	}
-
-	/**
-	 * Get the levels endpoint
-	 */
-	private getLevelsEndpoint(): string {
-		return `/communities/${this.communityId}/levels`;
-	}
-
-	/**
-	 * Get the point actions endpoint
-	 */
-	private getPointActionsEndpoint(): string {
-		return `/communities/${this.communityId}/point-actions`;
-	}
-
-	/**
-	 * Get the gamification config endpoint
-	 */
-	private getConfigEndpoint(): string {
-		return `/communities/${this.communityId}/gamification`;
 	}
 
 	/**
@@ -131,70 +99,6 @@ export class GamificationService {
 	}
 
 	/**
-	 * Fetch all available badges
-	 */
-	async fetchBadges(): Promise<Badge[]> {
-		const endpoint = this.getBadgesEndpoint();
-		console.log(`🏅 Fetching badges: ${endpoint}`);
-
-		try {
-			const response = await this.client.get<Badge[]>(endpoint);
-			return response.data;
-		} catch (error) {
-			console.error("❌ Error fetching badges:", error);
-			return [];
-		}
-	}
-
-	/**
-	 * Fetch all levels
-	 */
-	async fetchLevels(): Promise<Level[]> {
-		const endpoint = this.getLevelsEndpoint();
-		console.log(`📊 Fetching levels: ${endpoint}`);
-
-		try {
-			const response = await this.client.get<Level[]>(endpoint);
-			return response.data;
-		} catch (error) {
-			console.error("❌ Error fetching levels:", error);
-			return [];
-		}
-	}
-
-	/**
-	 * Fetch all point actions
-	 */
-	async fetchPointActions(): Promise<PointAction[]> {
-		const endpoint = this.getPointActionsEndpoint();
-		console.log(`⭐ Fetching point actions: ${endpoint}`);
-
-		try {
-			const response = await this.client.get<PointAction[]>(endpoint);
-			return response.data;
-		} catch (error) {
-			console.error("❌ Error fetching point actions:", error);
-			return [];
-		}
-	}
-
-	/**
-	 * Fetch gamification configuration
-	 */
-	async fetchConfig(): Promise<GamificationConfig | null> {
-		const endpoint = this.getConfigEndpoint();
-		console.log(`⚙️ Fetching gamification config: ${endpoint}`);
-
-		try {
-			const response = await this.client.get<GamificationConfig>(endpoint);
-			return response.data;
-		} catch (error) {
-			console.error("❌ Error fetching gamification config:", error);
-			return null;
-		}
-	}
-
-	/**
 	 * Fetch all gamification data
 	 */
 	async fetchAll(
@@ -207,26 +111,11 @@ export class GamificationService {
 		const leaderboard = await this.fetchFullLeaderboard({ delayMs });
 		await Bun.sleep(delayMs);
 
-		const badges = await this.fetchBadges();
-		await Bun.sleep(delayMs);
-
-		const levels = await this.fetchLevels();
-		await Bun.sleep(delayMs);
-
-		const pointActions = await this.fetchPointActions();
-		await Bun.sleep(delayMs);
-
-		const config = await this.fetchConfig();
-
 		return {
 			fetchedAt: new Date().toISOString(),
 			communityId: this.communityId,
 			groupId: this.groupId,
 			leaderboard,
-			badges,
-			levels,
-			pointActions,
-			config: config ?? undefined,
 		};
 	}
 
