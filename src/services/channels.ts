@@ -25,14 +25,11 @@ export class ChannelsService {
 	 */
 	async fetchAll(): Promise<Channel[]> {
 		const endpoint = this.getChannelsEndpoint();
-		console.log(`📺 Fetching all channels: ${endpoint}`);
 
 		try {
 			const response = await this.client.get<Channel[]>(endpoint);
-			console.log(`✅ Fetched ${response.data.length} channels`);
 			return response.data;
-		} catch (error) {
-			console.error("❌ Error fetching channels:", error);
+		} catch {
 			return [];
 		}
 	}

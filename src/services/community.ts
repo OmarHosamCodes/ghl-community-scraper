@@ -31,7 +31,6 @@ export class CommunityService {
 	async fetchCommunity(slug?: string): Promise<Community | null> {
 		const groupSlug = slug || env.groupSlug;
 		const endpoint = this.getCommunityBySlugEndpoint(groupSlug);
-		console.log(`🏠 Fetching community info by slug: ${endpoint}`);
 
 		try {
 			const response = await this.client.get<GroupDetailResponse>(endpoint);
@@ -39,8 +38,7 @@ export class CommunityService {
 
 			// Return groupDetail as Community (it contains all needed fields)
 			return groupDetail as unknown as Community;
-		} catch (error) {
-			console.error("❌ Error fetching community:", error);
+		} catch {
 			return null;
 		}
 	}
@@ -50,13 +48,11 @@ export class CommunityService {
 	 */
 	async fetchCommunityBySlug(slug: string): Promise<Group | null> {
 		const endpoint = this.getCommunityBySlugEndpoint(slug);
-		console.log(`🏠 Fetching community info by slug: ${endpoint}`);
 
 		try {
 			const response = await this.client.get<Group>(endpoint);
 			return response.data;
-		} catch (error) {
-			console.error(`❌ Error fetching community by slug ${slug}:`, error);
+		} catch {
 			return null;
 		}
 	}
@@ -66,8 +62,6 @@ export class CommunityService {
 	 */
 	async fetchAll(options: { delayMs?: number } = {}): Promise<CommunityExport> {
 		const { delayMs = env.fetchDelayMs } = options;
-
-		console.log("🏠 Fetching all community data...\n");
 
 		const community = await this.fetchCommunity();
 		await Bun.sleep(delayMs);

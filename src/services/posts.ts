@@ -27,10 +27,6 @@ export class PostsService {
 			params.previousId = previousId;
 		}
 
-		console.log(
-			`Fetching: ${this.endpoint}?${new URLSearchParams(params).toString()}`,
-		);
-
 		const response = await this.client.get<Post[]>(this.endpoint, { params });
 		return response.data;
 	}
@@ -42,33 +38,24 @@ export class PostsService {
 		const { delayMs = env.fetchDelayMs } = options;
 		const allPosts: Post[] = [];
 		let previousId: string | undefined;
-		let pageNumber = 1;
-
-		console.log("🚀 Starting to fetch all posts...\n");
 
 		while (true) {
 			try {
 				const posts = await this.fetchPage({ previousId });
 
 				if (posts.length === 0) {
-					console.log("\n✅ No more posts to fetch. Done!");
 					break;
 				}
 
 				allPosts.push(...posts);
-				console.log(
-					`📄 Page ${pageNumber}: Fetched ${posts.length} posts (Total: ${allPosts.length})`,
-				);
 
 				// Get the last post ID for the next page
 				const lastPost = posts[posts.length - 1];
 				previousId = lastPost?._id;
-				pageNumber++;
 
 				// Rate limiting delay
 				await Bun.sleep(delayMs);
-			} catch (error) {
-				console.error(`\n❌ Error fetching page ${pageNumber}:`, error);
+			} catch {
 				break;
 			}
 		}

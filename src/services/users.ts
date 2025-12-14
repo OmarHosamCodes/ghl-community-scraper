@@ -68,10 +68,6 @@ export class UsersService {
 		if (search) params.search = search;
 
 		const endpoint = this.getMembersEndpoint();
-		console.log(
-			`👥 Fetching members: ${endpoint}?${new URLSearchParams(params).toString()}`,
-		);
-
 		const response = await this.client.get<User[]>(endpoint, { params });
 		return response.data;
 	}
@@ -81,14 +77,11 @@ export class UsersService {
 	 */
 	async fetchAll(): Promise<User[]> {
 		const endpoint = this.getMembersEndpoint();
-		console.log(`👥 Fetching all members: ${endpoint}`);
 
 		try {
 			const response = await this.client.get<User[]>(endpoint);
-			console.log(`✅ Fetched ${response.data.length} members`);
 			return response.data;
-		} catch (error) {
-			console.error("❌ Error fetching members:", error);
+		} catch {
 			return [];
 		}
 	}
@@ -126,13 +119,6 @@ export class UsersService {
 		const { delayMs = env.fetchDelayMs, concurrency = 5 } = options;
 		const profiles: UserProfile[] = [];
 
-		console.log(
-			`\n👤 Fetching ${contactIds.length} profiles (concurrency: ${concurrency})...\n`,
-		);
-
-		let completed = 0;
-		const total = contactIds.length;
-
 		await this.processInBatches(
 			contactIds,
 			async (contactId) => {
@@ -140,10 +126,6 @@ export class UsersService {
 				if (profile) {
 					profiles.push(profile);
 				}
-				completed++;
-				console.log(
-					`📊 Profiles: ${completed}/${total} (${profile ? "found" : "not found"})`,
-				);
 				return profile;
 			},
 			concurrency,
@@ -161,24 +143,15 @@ export class UsersService {
 	): Promise<UserProfile[]> {
 		const { delayMs = env.fetchDelayMs, concurrency = 5 } = options;
 
-		console.log("🚀 Starting to fetch all members with full profiles...\n");
-
 		// Step 1: Fetch all members (single request)
 		const members = await this.fetchAll();
 
 		if (members.length === 0) {
-			console.log("⚠️ No members found.");
 			return [];
 		}
 
-		console.log(
-			`\n📋 Found ${members.length} members. Fetching full profiles (concurrency: ${concurrency})...\n`,
-		);
-
 		// Step 2: Fetch full profile for each member using parallel processing
 		const profiles: UserProfile[] = [];
-		let completed = 0;
-		const total = members.length;
 
 		await this.processInBatches(
 			members,
@@ -190,15 +163,12 @@ export class UsersService {
 					// Fallback to basic member data if profile fetch fails
 					profiles.push(member as UserProfile);
 				}
-				completed++;
-				console.log(`📊 Profiles: ${completed}/${total}`);
 				return profile;
 			},
 			concurrency,
 			delayMs,
 		);
 
-		console.log(`\n✅ Completed! Fetched ${profiles.length} full profiles.`);
 		return profiles;
 	}
 

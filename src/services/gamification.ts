@@ -65,9 +65,6 @@ export class GamificationService {
 		};
 
 		const endpoint = this.getLeaderboardEndpoint();
-		console.log(
-			`🏆 Fetching leaderboard: ${endpoint}?${new URLSearchParams(params).toString()}`,
-		);
 
 		try {
 			const response = await this.client.get<LeaderboardResponse>(endpoint, {
@@ -93,8 +90,7 @@ export class GamificationService {
 				timeFrame: entry.timeFrame,
 				updatedAt: entry.updatedAt,
 			}));
-		} catch (error) {
-			console.error("❌ Error fetching leaderboard:", error);
+		} catch {
 			return [];
 		}
 	}
@@ -109,33 +105,20 @@ export class GamificationService {
 		const allEntries: LeaderboardEntry[] = [];
 		let offset = 0;
 		const limit = 100;
-		let pageNumber = 1;
-
-		console.log("🚀 Starting to fetch full leaderboard...\n");
 
 		while (true) {
 			try {
 				const entries = await this.fetchLeaderboard({ limit, offset });
 
 				if (entries.length === 0) {
-					console.log("\n✅ No more leaderboard entries. Done!");
 					break;
 				}
 
 				allEntries.push(...entries);
-				console.log(
-					`📄 Page ${pageNumber}: Fetched ${entries.length} entries (Total: ${allEntries.length})`,
-				);
 
 				offset += limit;
-				pageNumber++;
-
 				await Bun.sleep(delayMs);
-			} catch (error) {
-				console.error(
-					`\n❌ Error fetching leaderboard page ${pageNumber}:`,
-					error,
-				);
+			} catch {
 				break;
 			}
 		}
@@ -150,8 +133,6 @@ export class GamificationService {
 		options: { delayMs?: number } = {},
 	): Promise<GamificationExport> {
 		const { delayMs = env.fetchDelayMs } = options;
-
-		console.log("🎮 Fetching all gamification data...\n");
 
 		const leaderboard = await this.fetchFullLeaderboard({ delayMs });
 		await Bun.sleep(delayMs);
