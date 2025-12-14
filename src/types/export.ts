@@ -4,6 +4,7 @@
 
 import type { Comment } from "./comment";
 import type { Channel, Community, Group } from "./community";
+import type { Contribution } from "./contribution";
 import type {
 	Badge,
 	LeaderboardEntry,
@@ -11,10 +12,15 @@ import type {
 	PointAction,
 } from "./gamification";
 import type { Post } from "./post";
-import type { User } from "./user";
+import type { User, UserProfile } from "./user";
 
 export interface PostWithComments extends Post {
 	comments?: Comment[];
+}
+
+export interface UserWithExtras extends User {
+	profile?: UserProfile;
+	contributions?: Contribution[];
 }
 
 export interface FullDataExport {
@@ -25,6 +31,8 @@ export interface FullDataExport {
 		totalPosts: number;
 		totalComments: number;
 		totalUsers: number;
+		totalProfiles: number;
+		totalContributions: number;
 		totalGroups: number;
 		totalChannels: number;
 	};
@@ -32,7 +40,10 @@ export interface FullDataExport {
 	groups: Group[];
 	channels: Channel[];
 	posts: PostWithComments[];
-	users: User[];
+	users: UserWithExtras[];
+	comments: Comment[];
+	profiles: UserProfile[];
+	contributions: Contribution[];
 	gamification: {
 		leaderboard: LeaderboardEntry[];
 		badges: Badge[];
@@ -45,8 +56,12 @@ export interface ScraperOptions {
 	fetchPosts?: boolean;
 	fetchComments?: boolean;
 	fetchUsers?: boolean;
+	fetchProfiles?: boolean;
+	fetchContributions?: boolean;
 	fetchGamification?: boolean;
 	fetchCommunityInfo?: boolean;
+	fetchChannels?: boolean;
+	fetchNotifications?: boolean;
 	maxCommentDepth?: number;
 	delayMs?: number;
 	/** Number of concurrent comment fetches (default: 3) */

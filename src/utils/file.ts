@@ -150,5 +150,47 @@ export async function exportFullData(
 		await exportToJson(gamificationExport, `${outputDir}/gamification.json`);
 	}
 
+	// Export comments separately
+	if (data.comments && data.comments.length > 0) {
+		await exportToJson(
+			{
+				fetchedAt: data.fetchedAt,
+				totalComments: data.comments.length,
+				communityId: data.communityId,
+				groupId: data.groupId,
+				comments: data.comments,
+			},
+			`${outputDir}/comments.json`,
+		);
+	}
+
+	// Export profiles separately
+	if (data.profiles && data.profiles.length > 0) {
+		await exportToJson(
+			{
+				fetchedAt: data.fetchedAt,
+				totalProfiles: data.profiles.length,
+				communityId: data.communityId,
+				groupId: data.groupId,
+				profiles: data.profiles,
+			},
+			`${outputDir}/profiles.json`,
+		);
+	}
+
+	// Export contributions separately
+	if (data.contributions && data.contributions.length > 0) {
+		await exportToJson(
+			{
+				fetchedAt: data.fetchedAt,
+				totalContributions: data.contributions.length,
+				communityId: data.communityId,
+				groupId: data.groupId,
+				contributions: data.contributions,
+			},
+			`${outputDir}/contributions.json`,
+		);
+	}
+
 	console.log("\n✅ All data exported successfully!");
 }

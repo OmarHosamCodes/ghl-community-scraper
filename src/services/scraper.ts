@@ -1,12 +1,19 @@
 import { env } from "../config/env";
 import type {
+	Comment,
+	Contribution,
 	FullDataExport,
 	PostWithComments,
 	ScraperOptions,
+	UserProfile,
+	UserWithExtras,
 } from "../types";
+import { ChannelsService } from "./channels";
 import { CommentsService } from "./comments";
 import { CommunityService } from "./community";
+import { ContributionsService } from "./contributions";
 import { GamificationService } from "./gamification";
+import { NotificationsService } from "./notifications";
 import { PostsService } from "./posts";
 import { UsersService } from "./users";
 
@@ -19,6 +26,9 @@ export class ScraperService {
 	private usersService: UsersService;
 	private gamificationService: GamificationService;
 	private communityService: CommunityService;
+	private channelsService: ChannelsService;
+	private contributionsService: ContributionsService;
+	private notificationsService: NotificationsService;
 
 	constructor(
 		private communityId: string = env.communityId,
@@ -29,6 +39,9 @@ export class ScraperService {
 		this.usersService = new UsersService(communityId, groupId);
 		this.gamificationService = new GamificationService(communityId, groupId);
 		this.communityService = new CommunityService(communityId, groupId);
+		this.channelsService = new ChannelsService(communityId, groupId);
+		this.contributionsService = new ContributionsService(communityId, groupId);
+		this.notificationsService = new NotificationsService(communityId, groupId);
 	}
 
 	/**
@@ -39,8 +52,12 @@ export class ScraperService {
 			fetchPosts = true,
 			fetchComments = true,
 			fetchUsers = true,
+			fetchProfiles = true,
+			fetchContributions = true,
 			fetchGamification = true,
 			fetchCommunityInfo = true,
+			fetchChannels = true,
+			fetchNotifications = true,
 			maxCommentDepth = 10,
 			delayMs = env.fetchDelayMs,
 			commentConcurrency = 3,
@@ -52,8 +69,12 @@ export class ScraperService {
 			fetchPosts,
 			fetchComments,
 			fetchUsers,
+			fetchProfiles,
+			fetchContributions,
 			fetchGamification,
 			fetchCommunityInfo,
+			fetchChannels,
+			fetchNotifications,
 			maxCommentDepth,
 			delayMs,
 		});
@@ -68,6 +89,8 @@ export class ScraperService {
 				totalPosts: 0,
 				totalComments: 0,
 				totalUsers: 0,
+				totalProfiles: 0,
+				totalContributions: 0,
 				totalGroups: 0,
 				totalChannels: 0,
 			},
@@ -75,6 +98,9 @@ export class ScraperService {
 			channels: [],
 			posts: [],
 			users: [],
+			comments: [],
+			profiles: [],
+			contributions: [],
 			gamification: {
 				leaderboard: [],
 				badges: [],
@@ -175,14 +201,90 @@ export class ScraperService {
 
 		result.posts = postsWithComments;
 
+		// Collect all comments separately for export
+		const allComments: Comment[] = [];
+		for (const post of postsWithComments) {
+			if (post.comments) {
+				const flattenComments = (comments: Comment[]): void => {
+					for (const comment of comments) {
+						allComments.push(comment);
+						if (comment.replies) {
+							flattenComments(comment.replies);
+						}
+					}
+				};
+				flattenComments(post.comments);
+			}
+		}
+		result.comments = allComments;
+
+		// Fetch channels (single request)
+		if (fetchChannels && !fetchCommunityInfo) {
+			console.log("📍 STEP 3.5: Fetching channels...\n");
+			const channels = await this.channelsService.fetchAll();
+			result.channels = channels;
+			result.metadata.totalChannels = channels.length;
+			console.log(`\n${"=".repeat(60)}\n`);
+		}
+
 		// Fetch users
+		const usersWithExtras: UserWithExtras[] = [];
+		const allProfiles: UserProfile[] = [];
+		const allContributions: Contribution[] = [];
+
 		if (fetchUsers) {
 			console.log("📍 STEP 4: Fetching users/members...\n");
 			const users = await this.usersService.fetchAll();
-			result.users = users;
 			result.metadata.totalUsers = users.length;
 			console.log(`\n${"=".repeat(60)}\n`);
+
+			// Fetch profiles for users
+			if (fetchProfiles && users.length > 0) {
+				console.log("📍 STEP 4.1: Fetching user profiles...\n");
+				let profilesCompleted = 0;
+
+				for (const user of users) {
+					const userWithExtras: UserWithExtras = { ...user };
+					const profile = await this.usersService.fetchProfile(user._id);
+
+					if (profile) {
+						userWithExtras.profile = profile;
+						allProfiles.push(profile);
+					}
+
+					profilesCompleted++;
+					console.log(
+						`📊 Progress: ${profilesCompleted}/${users.length} profiles fetched`,
+					);
+
+					// Fetch contributions for this user
+					if (fetchContributions) {
+						const contributions = await this.contributionsService.fetchAll(
+							user._id,
+							{ delayMs },
+						);
+						userWithExtras.contributions = contributions;
+						allContributions.push(...contributions);
+					}
+
+					usersWithExtras.push(userWithExtras);
+					await Bun.sleep(delayMs);
+				}
+
+				result.metadata.totalProfiles = allProfiles.length;
+				result.metadata.totalContributions = allContributions.length;
+				console.log(`\n${"=".repeat(60)}\n`);
+			} else {
+				// Just add users without extras
+				for (const user of users) {
+					usersWithExtras.push({ ...user });
+				}
+			}
 		}
+
+		result.users = usersWithExtras;
+		result.profiles = allProfiles;
+		result.contributions = allContributions;
 
 		// Fetch gamification data
 		if (fetchGamification) {
@@ -208,6 +310,8 @@ export class ScraperService {
 		console.log(`  Posts: ${result.metadata.totalPosts}`);
 		console.log(`  Comments: ${result.metadata.totalComments}`);
 		console.log(`  Users: ${result.metadata.totalUsers}`);
+		console.log(`  Profiles: ${result.metadata.totalProfiles}`);
+		console.log(`  Contributions: ${result.metadata.totalContributions}`);
 		console.log(
 			`  Leaderboard entries: ${result.gamification.leaderboard.length}`,
 		);
@@ -216,6 +320,28 @@ export class ScraperService {
 		console.log("=".repeat(40));
 
 		return result;
+	}
+
+	/**
+	 * Fetch notifications for the current user and save to file
+	 */
+	async fetchNotifications(outputDir: string = "output"): Promise<void> {
+		console.log("🔔 Fetching current user notifications...\n");
+		const notifications = await this.notificationsService.fetchAll();
+
+		const { exportToJson } = await import("../utils/file");
+		await exportToJson(
+			{
+				fetchedAt: new Date().toISOString(),
+				totalNotifications: notifications.length,
+				notifications,
+			},
+			`${outputDir}/currentUserNotification.json`,
+		);
+
+		console.log(
+			`✅ Saved ${notifications.length} notifications to currentUserNotification.json`,
+		);
 	}
 
 	/**
@@ -228,6 +354,9 @@ export class ScraperService {
 			users: this.usersService,
 			gamification: this.gamificationService,
 			community: this.communityService,
+			channels: this.channelsService,
+			contributions: this.contributionsService,
+			notifications: this.notificationsService,
 		};
 	}
 

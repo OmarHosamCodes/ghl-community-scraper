@@ -27,6 +27,13 @@ export class CommunityService {
 	}
 
 	/**
+	 * Get the community info by slug endpoint
+	 */
+	private getCommunityBySlugEndpoint(slug: string): string {
+		return `/communities/${this.communityId}/groups/slug/${slug}`;
+	}
+
+	/**
 	 * Get the groups endpoint
 	 */
 	private getGroupsEndpoint(): string {
@@ -52,6 +59,22 @@ export class CommunityService {
 			return response.data;
 		} catch (error) {
 			console.error("❌ Error fetching community:", error);
+			return null;
+		}
+	}
+
+	/**
+	 * Fetch community information by group slug
+	 */
+	async fetchCommunityBySlug(slug: string): Promise<Group | null> {
+		const endpoint = this.getCommunityBySlugEndpoint(slug);
+		console.log(`🏠 Fetching community info by slug: ${endpoint}`);
+
+		try {
+			const response = await this.client.get<Group>(endpoint);
+			return response.data;
+		} catch (error) {
+			console.error(`❌ Error fetching community by slug ${slug}:`, error);
 			return null;
 		}
 	}

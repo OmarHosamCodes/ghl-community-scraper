@@ -8,10 +8,15 @@ async function main() {
 		const options: ScraperOptions = {
 			fetchPosts: false,
 			fetchComments: false,
-			fetchUsers: false,
+			fetchUsers: true,
+			fetchProfiles: true,
+			fetchContributions: true,
 			fetchGamification: false,
 			fetchCommunityInfo: false,
+			fetchChannels: false,
+			fetchNotifications: false,
 			maxCommentDepth: 10, // Maximum depth for recursive comment fetching
+			commentConcurrency: 10, // Number of concurrent comment fetches
 		};
 
 		// Create scraper and fetch all data
@@ -20,6 +25,11 @@ async function main() {
 
 		// Export all data to files
 		await exportFullData(data, "output");
+
+		// Fetch and save notifications separately
+		if (options.fetchNotifications) {
+			await scraper.fetchNotifications("output");
+		}
 
 		console.log("\n🎉 Scraping completed successfully!");
 	} catch (error) {

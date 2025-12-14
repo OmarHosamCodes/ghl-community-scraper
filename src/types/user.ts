@@ -2,6 +2,8 @@
  * User-related type definitions
  */
 
+import type { Contribution } from "./contribution";
+
 export interface UserSocialLinks {
 	facebook?: string;
 	twitter?: string;
@@ -51,6 +53,11 @@ export interface UserProfile extends User {
 		totalReactions: number;
 		totalPoints: number;
 	};
+}
+
+export interface UserWithContributions extends User {
+	contributions?: Contribution[];
+	profile?: UserProfile;
 }
 
 export interface UsersExport {
