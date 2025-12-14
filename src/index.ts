@@ -1,16 +1,27 @@
-import { PostsService } from "./services";
-import { createPostsExport, exportPostsToJson } from "./utils";
+import { ScraperService } from "./services";
+import type { ScraperOptions } from "./types";
+import { exportFullData } from "./utils";
 
 async function main() {
 	try {
-		const postsService = new PostsService();
-		const posts = await postsService.fetchAll();
-		const { communityId, groupId } = postsService.getInfo();
+		// Configure what to fetch
+		const options: ScraperOptions = {
+			fetchPosts: true,
+			fetchComments: false,
+			fetchUsers: false,
+			fetchGamification: false,
+			fetchCommunityInfo: false,
+			maxCommentDepth: 10, // Maximum depth for recursive comment fetching
+		};
 
-		console.log(`\n📊 Total posts fetched: ${posts.length}`);
+		// Create scraper and fetch all data
+		const scraper = new ScraperService();
+		const data = await scraper.fetchAll(options);
 
-		const exportData = createPostsExport(posts, communityId, groupId);
-		await exportPostsToJson(exportData, "output/posts.json");
+		// Export all data to files
+		await exportFullData(data, "output");
+
+		console.log("\n🎉 Scraping completed successfully!");
 	} catch (error) {
 		console.error("Fatal error:", error);
 		process.exit(1);

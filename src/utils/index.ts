@@ -2,4 +2,11 @@
  * Utility exports
  */
 
-export { createPostsExport, exportPostsToJson } from "./file";
+export {
+	createCommentsExport,
+	createPostsExport,
+	createUsersExport,
+	exportFullData,
+	exportPostsToJson,
+	exportToJson,
+} from "./file";
