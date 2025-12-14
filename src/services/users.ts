@@ -17,14 +17,14 @@ export class UsersService {
 	 * Get the members endpoint
 	 */
 	private getMembersEndpoint(): string {
-		return `/communities/${this.communityId}/groups/${this.groupId}/public/members`;
+		return `/communities/${this.communityId}/groups/${this.groupId}/users/list`;
 	}
 
 	/**
 	 * Get the user profile endpoint
 	 */
-	private getProfileEndpoint(userSlug: string): string {
-		return `/communities/${this.communityId}/public/members/${userSlug}`;
+	private getProfileEndpoint(locationId: string): string {
+		return `/communities/${this.communityId}/users/${locationId}`;
 	}
 
 	/**
@@ -47,56 +47,34 @@ export class UsersService {
 	}
 
 	/**
-	 * Fetch all members with pagination
+	 * Fetch all members (single request)
 	 */
-	async fetchAll(options: { delayMs?: number } = {}): Promise<User[]> {
-		const { delayMs = env.fetchDelayMs } = options;
-		const allUsers: User[] = [];
-		let previousId: string | undefined;
-		let pageNumber = 1;
+	async fetchAll(): Promise<User[]> {
+		const endpoint = this.getMembersEndpoint();
+		console.log(`👥 Fetching all members: ${endpoint}`);
 
-		console.log("🚀 Starting to fetch all members...\n");
-
-		while (true) {
-			try {
-				const users = await this.fetchPage({ previousId });
-
-				if (users.length === 0) {
-					console.log("\n✅ No more members to fetch. Done!");
-					break;
-				}
-
-				allUsers.push(...users);
-				console.log(
-					`📄 Page ${pageNumber}: Fetched ${users.length} members (Total: ${allUsers.length})`,
-				);
-
-				const lastUser = users[users.length - 1];
-				previousId = lastUser?._id;
-				pageNumber++;
-
-				await Bun.sleep(delayMs);
-			} catch (error) {
-				console.error(`\n❌ Error fetching members page ${pageNumber}:`, error);
-				break;
-			}
+		try {
+			const response = await this.client.get<User[]>(endpoint);
+			console.log(`✅ Fetched ${response.data.length} members`);
+			return response.data;
+		} catch (error) {
+			console.error("❌ Error fetching members:", error);
+			return [];
 		}
-
-		return allUsers;
 	}
 
 	/**
 	 * Fetch a single user's profile by slug
 	 */
-	async fetchProfile(userSlug: string): Promise<UserProfile | null> {
+	async fetchProfile(locationId: string): Promise<UserProfile | null> {
 		try {
-			const endpoint = this.getProfileEndpoint(userSlug);
+			const endpoint = this.getProfileEndpoint(locationId);
 			console.log(`👤 Fetching profile: ${endpoint}`);
 
 			const response = await this.client.get<UserProfile>(endpoint);
 			return response.data;
 		} catch (error) {
-			console.error(`❌ Error fetching profile for ${userSlug}:`, error);
+			console.error(`❌ Error fetching profile for ${locationId}:`, error);
 			return null;
 		}
 	}
@@ -105,20 +83,69 @@ export class UsersService {
 	 * Fetch profiles for multiple users
 	 */
 	async fetchProfiles(
-		userSlugs: string[],
+		locationIds: string[],
 		options: { delayMs?: number } = {},
 	): Promise<UserProfile[]> {
 		const { delayMs = env.fetchDelayMs } = options;
 		const profiles: UserProfile[] = [];
 
-		for (const slug of userSlugs) {
-			const profile = await this.fetchProfile(slug);
+		for (const locationId of locationIds) {
+			const profile = await this.fetchProfile(locationId);
 			if (profile) {
 				profiles.push(profile);
 			}
 			await Bun.sleep(delayMs);
 		}
 
+		return profiles;
+	}
+
+	/**
+	 * Fetch all members and enrich with full profile data
+	 */
+	async fetchAllWithProfiles(
+		options: { delayMs?: number } = {},
+	): Promise<UserProfile[]> {
+		const { delayMs = env.fetchDelayMs } = options;
+
+		console.log("🚀 Starting to fetch all members with full profiles...\n");
+
+		// Step 1: Fetch all members (single request)
+		const members = await this.fetchAll();
+
+		if (members.length === 0) {
+			console.log("⚠️ No members found.");
+			return [];
+		}
+
+		console.log(
+			`\n📋 Found ${members.length} members. Fetching full profiles...\n`,
+		);
+
+		// Step 2: Fetch full profile for each member using their locationId
+		const profiles: UserProfile[] = [];
+		let completed = 0;
+
+		for (const member of members) {
+			const locationId = member._id;
+			const profile = await this.fetchProfile(locationId);
+
+			if (profile) {
+				profiles.push(profile);
+			} else {
+				// Fallback to basic member data if profile fetch fails
+				profiles.push(member as UserProfile);
+			}
+
+			completed++;
+			console.log(
+				`📊 Progress: ${completed}/${members.length} profiles fetched`,
+			);
+
+			await Bun.sleep(delayMs);
+		}
+
+		console.log(`\n✅ Completed! Fetched ${profiles.length} full profiles.`);
 		return profiles;
 	}
 
