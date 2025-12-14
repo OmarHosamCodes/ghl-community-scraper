@@ -49,4 +49,8 @@ export interface ScraperOptions {
 	fetchCommunityInfo?: boolean;
 	maxCommentDepth?: number;
 	delayMs?: number;
+	/** Number of concurrent comment fetches (default: 3) */
+	commentConcurrency?: number;
+	/** Enable verbose logging for comments */
+	verboseComments?: boolean;
 }

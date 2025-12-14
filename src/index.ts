@@ -7,7 +7,7 @@ async function main() {
 		// Configure what to fetch
 		const options: ScraperOptions = {
 			fetchPosts: true,
-			fetchComments: false,
+			fetchComments: true,
 			fetchUsers: false,
 			fetchGamification: false,
 			fetchCommunityInfo: false,
