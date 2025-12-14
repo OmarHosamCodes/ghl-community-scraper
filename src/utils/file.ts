@@ -182,4 +182,9 @@ export async function exportFullData(
 			`${outputDir}/contributions.json`,
 		);
 	}
+
+	// Export channels separately
+	if (data.channels && data.channels.length > 0) {
+		await exportToJson(data.channels, `${outputDir}/channels.json`);
+	}
 }
