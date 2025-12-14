@@ -8,9 +8,9 @@ async function main() {
 		const options: ScraperOptions = {
 			fetchPosts: false,
 			fetchComments: false,
-			fetchUsers: true,
-			fetchProfiles: true,
-			fetchContributions: true,
+			fetchUsers: false,
+			fetchProfiles: false,
+			fetchContributions: false,
 			fetchGamification: false,
 			fetchCommunityInfo: false,
 			fetchChannels: false,

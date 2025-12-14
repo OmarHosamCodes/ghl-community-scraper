@@ -25,35 +25,35 @@ export class GamificationService {
 	 * Get the leaderboard endpoint
 	 */
 	private getLeaderboardEndpoint(): string {
-		return `/communities/${this.communityId}/groups/${this.groupId}/public/leaderboard`;
+		return `/communities/${this.communityId}/groups/${this.groupId}/leaderboard`;
 	}
 
 	/**
 	 * Get the badges endpoint
 	 */
 	private getBadgesEndpoint(): string {
-		return `/communities/${this.communityId}/public/badges`;
+		return `/communities/${this.communityId}/badges`;
 	}
 
 	/**
 	 * Get the levels endpoint
 	 */
 	private getLevelsEndpoint(): string {
-		return `/communities/${this.communityId}/public/levels`;
+		return `/communities/${this.communityId}/levels`;
 	}
 
 	/**
 	 * Get the point actions endpoint
 	 */
 	private getPointActionsEndpoint(): string {
-		return `/communities/${this.communityId}/public/point-actions`;
+		return `/communities/${this.communityId}/point-actions`;
 	}
 
 	/**
 	 * Get the gamification config endpoint
 	 */
 	private getConfigEndpoint(): string {
-		return `/communities/${this.communityId}/public/gamification`;
+		return `/communities/${this.communityId}/gamification`;
 	}
 
 	/**

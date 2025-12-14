@@ -21,7 +21,7 @@ export function getPostsEndpoint(
 	communityId: string = env.communityId,
 	groupId: string = env.groupId,
 ): string {
-	return `/communities/${communityId}/groups/${groupId}/public/posts`;
+	return `/communities/${communityId}/groups/${groupId}/posts`;
 }
 
 /**
@@ -32,7 +32,7 @@ export function getCommentsEndpoint(
 	groupId: string = env.groupId,
 	postId: string,
 ): string {
-	return `/communities/${communityId}/groups/${groupId}/public/posts/${postId}/comments`;
+	return `/communities/${communityId}/groups/${groupId}/posts/${postId}/comments`;
 }
 
 /**
@@ -42,7 +42,7 @@ export function getMembersEndpoint(
 	communityId: string = env.communityId,
 	groupId: string = env.groupId,
 ): string {
-	return `/communities/${communityId}/groups/${groupId}/public/members`;
+	return `/communities/${communityId}/groups/${groupId}/members`;
 }
 
 /**
@@ -52,7 +52,7 @@ export function getLeaderboardEndpoint(
 	communityId: string = env.communityId,
 	groupId: string = env.groupId,
 ): string {
-	return `/communities/${communityId}/groups/${groupId}/public/leaderboard`;
+	return `/communities/${communityId}/groups/${groupId}/leaderboard`;
 }
 
 /**
@@ -61,7 +61,7 @@ export function getLeaderboardEndpoint(
 export function getCommunityEndpoint(
 	communityId: string = env.communityId,
 ): string {
-	return `/communities/${communityId}/public`;
+	return `/communities/${communityId}`;
 }
 
 /**
@@ -70,7 +70,7 @@ export function getCommunityEndpoint(
 export function getGroupsEndpoint(
 	communityId: string = env.communityId,
 ): string {
-	return `/communities/${communityId}/public/groups`;
+	return `/communities/${communityId}/groups`;
 }
 
 /**
@@ -80,7 +80,7 @@ export function getChannelsEndpoint(
 	communityId: string = env.communityId,
 	groupId: string = env.groupId,
 ): string {
-	return `/communities/${communityId}/groups/${groupId}/public/channels`;
+	return `/communities/${communityId}/groups/${groupId}/channels`;
 }
 
 /**
@@ -89,7 +89,7 @@ export function getChannelsEndpoint(
 export function getBadgesEndpoint(
 	communityId: string = env.communityId,
 ): string {
-	return `/communities/${communityId}/public/badges`;
+	return `/communities/${communityId}/badges`;
 }
 
 /**
@@ -98,7 +98,7 @@ export function getBadgesEndpoint(
 export function getLevelsEndpoint(
 	communityId: string = env.communityId,
 ): string {
-	return `/communities/${communityId}/public/levels`;
+	return `/communities/${communityId}/levels`;
 }
 
 /**
@@ -108,5 +108,5 @@ export function getUserProfileEndpoint(
 	communityId: string = env.communityId,
 	userSlug: string,
 ): string {
-	return `/communities/${communityId}/public/members/${userSlug}`;
+	return `/communities/${communityId}/members/${userSlug}`;
 }

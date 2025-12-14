@@ -23,7 +23,7 @@ export class CommunityService {
 	 * Get the community info endpoint
 	 */
 	private getCommunityEndpoint(): string {
-		return `/communities/${this.communityId}/public`;
+		return `/communities/${this.communityId}`;
 	}
 
 	/**
@@ -37,14 +37,14 @@ export class CommunityService {
 	 * Get the groups endpoint
 	 */
 	private getGroupsEndpoint(): string {
-		return `/communities/${this.communityId}/public/groups`;
+		return `/communities/${this.communityId}/groups`;
 	}
 
 	/**
 	 * Get the channels endpoint for a group
 	 */
 	private getChannelsEndpoint(groupId: string = this.groupId): string {
-		return `/communities/${this.communityId}/groups/${groupId}/public/channels`;
+		return `/communities/${this.communityId}/groups/${groupId}/channels`;
 	}
 
 	/**
