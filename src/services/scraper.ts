@@ -43,6 +43,8 @@ export class ScraperService {
 			fetchCommunityInfo = true,
 			maxCommentDepth = 10,
 			delayMs = env.fetchDelayMs,
+			commentConcurrency = 3,
+			verboseComments = false,
 		} = options;
 
 		console.log("🚀 Starting full community data scrape...\n");
@@ -102,37 +104,69 @@ export class ScraperService {
 			result.metadata.totalPosts = posts.length;
 			console.log("\n" + "=".repeat(60) + "\n");
 
-			// Fetch comments for each post
+			// Fetch comments for each post - parallelized
 			if (fetchComments && posts.length > 0) {
 				console.log("📍 STEP 3: Fetching comments for all posts...\n");
-				let totalComments = 0;
 
-				for (const post of postsWithComments) {
-					const postIndex = postsWithComments.indexOf(post);
-					console.log(
-						`\n📝 Processing post ${postIndex + 1}/${postsWithComments.length}: "${post.title || post._id}"`,
-					);
+				// Filter posts that have comments
+				const postsWithCommentsToFetch = postsWithComments.filter(
+					(p) => p.commentsCount > 0,
+				);
+				const postsWithoutComments = postsWithComments.filter(
+					(p) => p.commentsCount === 0,
+				);
 
-					if (post.commentsCount > 0) {
-						const comments = await this.commentsService.fetchAllWithReplies(
-							post._id,
-							{ delayMs, maxDepth: maxCommentDepth },
-						);
-						post.comments = comments;
-						const commentCount =
-							this.commentsService.countTotalComments(comments);
-						totalComments += commentCount;
-						console.log(
-							`    ✅ Fetched ${commentCount} total comments (including replies)`,
-						);
-					} else {
-						post.comments = [];
-						console.log("    ⏭️ No comments to fetch");
-					}
-
-					await Bun.sleep(delayMs);
+				// Initialize posts without comments
+				for (const post of postsWithoutComments) {
+					post.comments = [];
 				}
 
+				console.log(
+					`    📊 ${postsWithCommentsToFetch.length} posts have comments to fetch`,
+				);
+
+				// Process posts in parallel batches
+				let processed = 0;
+				const totalToProcess = postsWithCommentsToFetch.length;
+
+				for (let i = 0; i < totalToProcess; i += commentConcurrency) {
+					const batch = postsWithCommentsToFetch.slice(
+						i,
+						i + commentConcurrency,
+					);
+
+					await Promise.all(
+						batch.map(async (post) => {
+							const comments = await this.commentsService.fetchAllWithReplies(
+								post._id,
+								{
+									delayMs: 100,
+									maxDepth: maxCommentDepth,
+									concurrency: 5,
+									verbose: verboseComments,
+								},
+							);
+							post.comments = comments;
+							processed++;
+							const commentCount =
+								this.commentsService.countTotalComments(comments);
+							console.log(
+								`    ✅ [${processed}/${totalToProcess}] "${post.title || post._id}": ${commentCount} comments`,
+							);
+						}),
+					);
+
+					// Small delay between batches
+					if (i + commentConcurrency < totalToProcess) {
+						await Bun.sleep(delayMs);
+					}
+				}
+
+				const totalComments = postsWithComments.reduce(
+					(sum, post) =>
+						sum + this.commentsService.countTotalComments(post.comments || []),
+					0,
+				);
 				result.metadata.totalComments = totalComments;
 				console.log(`\n📊 Total comments fetched: ${totalComments}`);
 				console.log("\n" + "=".repeat(60) + "\n");

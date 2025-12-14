@@ -2,8 +2,15 @@ import { createApiClient } from "../api";
 import { env } from "../config/env";
 import type { Comment, CommentFetchOptions } from "../types";
 
+interface FetchOptions {
+	delayMs?: number;
+	maxDepth?: number;
+	concurrency?: number;
+	verbose?: boolean;
+}
+
 /**
- * Comments service for fetching post comments with recursive reply extraction
+ * Comments service for fetching post comments with optimized parallel fetching
  */
 export class CommentsService {
 	private client = createApiClient();
@@ -17,11 +24,11 @@ export class CommentsService {
 	 * Get the comments endpoint for a specific post
 	 */
 	private getCommentsEndpoint(postId: string): string {
-		return `/communities/${this.communityId}/groups/${this.groupId}/public/posts/${postId}/comments`;
+		return `/communities/${this.communityId}/groups/${this.groupId}/posts/${postId}/comments`;
 	}
 
 	/**
-	 * Fetch a single page of comments for a post
+	 * Fetch a single page of comments for a post (optimized - minimal logging)
 	 */
 	async fetchPage(
 		postId: string,
@@ -34,47 +41,35 @@ export class CommentsService {
 		if (parentCommentId) params.parentCommentId = parentCommentId;
 
 		const endpoint = this.getCommentsEndpoint(postId);
-		console.log(
-			`  💬 Fetching comments: ${endpoint}?${new URLSearchParams(params).toString()}`,
-		);
-
 		const response = await this.client.get<Comment[]>(endpoint, { params });
 		return response.data;
 	}
 
 	/**
-	 * Fetch all comments for a post (top-level only)
+	 * Fetch all comments for a post (top-level only) - optimized with minimal delays
 	 */
 	async fetchAllForPost(
 		postId: string,
-		options: { delayMs?: number } = {},
+		options: FetchOptions = {},
 	): Promise<Comment[]> {
-		const { delayMs = env.fetchDelayMs } = options;
+		const { delayMs = 100, verbose = false } = options;
 		const allComments: Comment[] = [];
 		let previousId: string | undefined;
-		let pageNumber = 1;
 
 		while (true) {
 			try {
 				const comments = await this.fetchPage(postId, { previousId });
-
 				if (comments.length === 0) break;
 
 				allComments.push(...comments);
-				console.log(
-					`    📝 Page ${pageNumber}: Fetched ${comments.length} comments (Total: ${allComments.length})`,
-				);
+				previousId = comments[comments.length - 1]?._id;
 
-				const lastComment = comments[comments.length - 1];
-				previousId = lastComment?._id;
-				pageNumber++;
-
-				await Bun.sleep(delayMs);
+				// Only delay if we're getting more pages
+				if (comments.length === env.fetchLimit) {
+					await Bun.sleep(delayMs);
+				}
 			} catch (error) {
-				console.error(
-					`    ❌ Error fetching comments page ${pageNumber}:`,
-					error,
-				);
+				if (verbose) console.error(`    ❌ Error fetching comments:`, error);
 				break;
 			}
 		}
@@ -83,14 +78,14 @@ export class CommentsService {
 	}
 
 	/**
-	 * Fetch replies for a specific comment
+	 * Fetch all replies for a comment - optimized
 	 */
 	async fetchReplies(
 		postId: string,
 		parentCommentId: string,
-		options: { delayMs?: number } = {},
+		options: FetchOptions = {},
 	): Promise<Comment[]> {
-		const { delayMs = env.fetchDelayMs } = options;
+		const { delayMs = 50 } = options;
 		const allReplies: Comment[] = [];
 		let previousId: string | undefined;
 
@@ -100,17 +95,15 @@ export class CommentsService {
 					previousId,
 					parentCommentId,
 				});
-
 				if (replies.length === 0) break;
 
 				allReplies.push(...replies);
+				previousId = replies[replies.length - 1]?._id;
 
-				const lastReply = replies[replies.length - 1];
-				previousId = lastReply?._id;
-
-				await Bun.sleep(delayMs);
-			} catch (error) {
-				console.error(`    ❌ Error fetching replies:`, error);
+				if (replies.length === env.fetchLimit) {
+					await Bun.sleep(delayMs);
+				}
+			} catch {
 				break;
 			}
 		}
@@ -119,51 +112,116 @@ export class CommentsService {
 	}
 
 	/**
-	 * Recursively fetch all comments and their nested replies
+	 * Process items in batches with controlled concurrency
+	 */
+	private async processInBatches<T, R>(
+		items: T[],
+		processor: (item: T) => Promise<R>,
+		concurrency: number,
+		delayBetweenBatches: number,
+	): Promise<R[]> {
+		const results: R[] = [];
+
+		for (let i = 0; i < items.length; i += concurrency) {
+			const batch = items.slice(i, i + concurrency);
+			const batchResults = await Promise.all(batch.map(processor));
+			results.push(...batchResults);
+
+			// Small delay between batches to avoid rate limiting
+			if (i + concurrency < items.length) {
+				await Bun.sleep(delayBetweenBatches);
+			}
+		}
+
+		return results;
+	}
+
+	/**
+	 * Fetch all comments and their nested replies with optimized parallel fetching
 	 */
 	async fetchAllWithReplies(
 		postId: string,
-		options: { delayMs?: number; maxDepth?: number } = {},
+		options: FetchOptions = {},
 	): Promise<Comment[]> {
-		const { delayMs = env.fetchDelayMs, maxDepth = 10 } = options;
+		const {
+			delayMs = 100,
+			maxDepth = 10,
+			concurrency = 5,
+			verbose = false,
+		} = options;
 
 		// First, get all top-level comments
-		const topLevelComments = await this.fetchAllForPost(postId, { delayMs });
+		const topLevelComments = await this.fetchAllForPost(postId, {
+			delayMs,
+			verbose,
+		});
 
-		// Recursively fetch replies for each comment
-		const fetchRepliesRecursively = async (
-			comment: Comment,
-			currentDepth: number,
-		): Promise<Comment> => {
-			if (currentDepth >= maxDepth || comment.repliesCount === 0) {
-				return comment;
-			}
+		if (topLevelComments.length === 0) return [];
 
-			console.log(
-				`      🔄 Fetching ${comment.repliesCount} replies for comment ${comment._id} (depth: ${currentDepth})`,
-			);
-
-			const replies = await this.fetchReplies(postId, comment._id, { delayMs });
-
-			// Recursively fetch nested replies
-			const repliesWithNested = await Promise.all(
-				replies.map((reply) =>
-					fetchRepliesRecursively(reply, currentDepth + 1),
-				),
-			);
-
-			return {
-				...comment,
-				replies: repliesWithNested,
-			};
-		};
-
-		// Process all top-level comments
-		const commentsWithReplies = await Promise.all(
-			topLevelComments.map((comment) => fetchRepliesRecursively(comment, 1)),
+		// Filter comments that have replies to fetch
+		const commentsWithReplies = topLevelComments.filter(
+			(c) => c.repliesCount > 0,
 		);
 
-		return commentsWithReplies;
+		if (verbose && commentsWithReplies.length > 0) {
+			console.log(
+				`    🔄 Fetching replies for ${commentsWithReplies.length} comments...`,
+			);
+		}
+
+		// Create a map for quick lookup
+		const commentMap = new Map<string, Comment>(
+			topLevelComments.map((c) => [c._id, { ...c }]),
+		);
+
+		// Fetch replies in parallel batches (depth 1)
+		if (commentsWithReplies.length > 0) {
+			await this.processInBatches(
+				commentsWithReplies,
+				async (comment) => {
+					const replies = await this.fetchReplies(postId, comment._id, {
+						delayMs: 50,
+					});
+					const existingComment = commentMap.get(comment._id);
+					if (existingComment) {
+						existingComment.replies = replies;
+						// Add nested replies to map for further processing
+						for (const reply of replies) {
+							commentMap.set(reply._id, reply);
+						}
+					}
+				},
+				concurrency,
+				delayMs,
+			);
+
+			// Process nested replies (depth 2+) in parallel batches
+			for (let depth = 2; depth < maxDepth; depth++) {
+				const pendingReplies = Array.from(commentMap.values()).filter(
+					(c) => c.repliesCount > 0 && !c.replies,
+				);
+
+				if (pendingReplies.length === 0) break;
+
+				await this.processInBatches(
+					pendingReplies,
+					async (comment) => {
+						const replies = await this.fetchReplies(postId, comment._id, {
+							delayMs: 50,
+						});
+						comment.replies = replies;
+						for (const reply of replies) {
+							commentMap.set(reply._id, reply);
+						}
+					},
+					concurrency,
+					delayMs,
+				);
+			}
+		}
+
+		// Return top-level comments with their nested replies
+		return topLevelComments.map((c) => commentMap.get(c._id) || c);
 	}
 
 	/**

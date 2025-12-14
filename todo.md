@@ -1,0 +1,7 @@
+Scrapers:
+
+POSTS [x]
+COMMENTS [x]
+USERS [ ]
+GAMIFICATION [ ]
+COMMUNITY INFO [ ]
